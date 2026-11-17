@@ -15,6 +15,7 @@ import { WhatsAppFloatingButton } from './components/WhatsAppFloatingButton';
 import { CookieBanner, getSavedCookiePreferences } from './components/CookieBanner';
 import { HeroReveal } from './components/MotionPrimitives';
 import { PageRouteSkeleton } from './components/StateFeedback';
+import { SeoMetaManager } from './components/SeoMetaManager';
 import { HomePage } from './pages/HomePage';
 import { testConnection } from './lib/firebase';
 
@@ -42,35 +43,6 @@ const PortalPage = React.lazy(() =>
 const AdminPage = React.lazy(() =>
   import('./pages/AdminPage').then((m) => ({ default: m.AdminPage }))
 );
-
-const ROUTE_TITLES: Record<string, string> = {
-  '/': 'Chiron Investigations | Cybercrime Forensics & Cryptocurrency Recovery',
-  '/services': 'Forensic Services | Chiron Investigations',
-  '/scam-types': 'Scam Types Investigated | Chiron Investigations',
-  '/how-it-works': 'How It Works & Forensic Methodology | Chiron Investigations',
-  '/process': 'Forensic Process | Chiron Investigations',
-  '/case-studies': 'Case Studies & Outcomes | Chiron Investigations',
-  '/about': 'About Us & Leadership | Chiron Investigations',
-  '/assessment': 'Free Case Assessment | Chiron Investigations',
-  '/contact': 'Contact & Intake | Chiron Investigations',
-  '/portal': 'Client Case Portal | Chiron Investigations',
-  '/admin': 'Investigator Admin Console | Chiron Investigations',
-};
-
-const ScrollAndMetaManager: React.FC = () => {
-  const { pathname } = useLocation();
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'auto' });
-    const baseKey =
-      Object.keys(ROUTE_TITLES).find((key) =>
-        key === '/' ? pathname === '/' : pathname.startsWith(key)
-      ) || '/';
-    document.title = ROUTE_TITLES[baseKey];
-  }, [pathname]);
-
-  return null;
-};
 
 const NotFoundPage: React.FC = () => (
   <div className="bg-white min-h-[60vh] flex items-center justify-center px-4 py-20">
@@ -105,7 +77,7 @@ const AppShell: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-[#0A0A0A]">
-      <ScrollAndMetaManager />
+      <SeoMetaManager />
       <Header />
       <main className="flex-1">
         <motion.div

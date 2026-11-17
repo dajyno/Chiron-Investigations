@@ -4,6 +4,7 @@ import { Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
 import { SERVICES_DATA } from '../data/servicesData';
 import { SCAM_TYPES_DATA } from '../data/scamTypesData';
 import { Reveal } from './MotionPrimitives';
+import chironLogo from '../assets/images/chiron-logo.svg';
 
 interface FooterProps {
   onOpenCookieSettings: () => void;
@@ -20,9 +21,14 @@ export const Footer: React.FC<FooterProps> = ({ onOpenCookieSettings }) => {
           <div className="space-y-4">
             <Link
               to="/"
-              className="font-display text-lg font-bold tracking-tight text-[#0A0A0A] hover:opacity-80 transition-opacity inline-block"
+              aria-label="Chiron Investigations Home"
+              className="inline-flex items-center hover:opacity-85 transition-opacity"
             >
-              Chiron Investigations
+              <img
+                src={chironLogo}
+                alt="Chiron Investigations"
+                className="h-9 w-auto object-contain"
+              />
             </Link>
             <p className="text-sm text-[#475569] leading-relaxed">
               Independent cybercrime intelligence, multi-chain cryptocurrency tracing, and forensic

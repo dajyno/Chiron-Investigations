@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { ChevronDown, Menu, X } from 'lucide-react';
 import { SERVICES_DATA } from '../data/servicesData';
 import { SCAM_TYPES_DATA } from '../data/scamTypesData';
+import chironLogo from '../assets/images/chiron-logo.svg';
 
 type OpenMenu = 'services' | 'scams' | null;
 
@@ -49,12 +50,17 @@ export const Header: React.FC = () => {
       className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-[#E2E8F0]/90 shadow-[0_4px_24px_-8px_rgba(10,10,10,0.06)]"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-8">
-        {/* Zone 1: Single-line Brand Wordmark */}
+        {/* Zone 1: Brand Logo */}
         <Link
           to="/"
-          className="font-display text-lg font-bold tracking-tight text-[#0A0A0A] whitespace-nowrap shrink-0 hover:opacity-80 transition-opacity focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#D4AF37]"
+          aria-label="Chiron Investigations Home"
+          className="inline-flex items-center shrink-0 hover:opacity-85 transition-opacity focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#D4AF37]"
         >
-          Chiron Investigations
+          <img
+            src={chironLogo}
+            alt="Chiron Investigations"
+            className="h-8 sm:h-9 w-auto object-contain"
+          />
         </Link>
 
         {/* Zone 2: Primary Desktop Navigation */}
