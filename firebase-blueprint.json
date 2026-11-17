@@ -179,6 +179,18 @@
           "type": "string",
           "maxLength": 128
         },
+        "clientName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "clientPhone": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "caseSummary": {
+          "type": "string",
+          "maxLength": 500
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time"
@@ -244,19 +256,58 @@
     },
     "AdminRecord": {
       "title": "AdminRecord",
-      "description": "Authorized investigator or administrator profile.",
+      "description": "Authorized staff investigator or administrator profile.",
       "type": "object",
       "properties": {
+        "username": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 40,
+          "pattern": "^[a-z0-9._-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
         "email": {
           "type": "string",
-          "maxLength": 160
+          "minLength": 5,
+          "maxLength": 160,
+          "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
         },
         "role": {
           "type": "string",
           "enum": ["admin"]
+        },
+        "createdByUid": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
         }
       },
-      "required": ["email", "role"]
+      "required": ["username", "displayName", "email", "role", "createdByUid", "createdAt"]
+    },
+    "StaffBootstrap": {
+      "title": "StaffBootstrap",
+      "description": "Immutable one-time lock document confirming the primary staff admin account has been initialized.",
+      "type": "object",
+      "properties": {
+        "initializedByUid": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["initializedByUid", "createdAt"]
     }
   },
   "firestore": {
@@ -274,7 +325,11 @@
     },
     "/admins/{adminUid}": {
       "schema": { "$ref": "#/entities/AdminRecord" },
-      "description": "Stores authorized administrator accounts."
+      "description": "Stores authorized staff administrator accounts."
+    },
+    "/system_meta/{docId}": {
+      "schema": { "$ref": "#/entities/StaffBootstrap" },
+      "description": "Immutable bootstrap state preventing duplicate initial admin provisioning."
     }
   }
 }

@@ -57,10 +57,10 @@ export const Footer: React.FC<FooterProps> = ({ onOpenCookieSettings }) => {
               </a>
               <span aria-hidden="true">·</span>
               <Link
-                to="/portal"
+                to="/admin"
                 className="hover:text-[#0A0A0A] underline-offset-4 hover:underline transition-colors"
               >
-                Client Portal
+                Admin
               </Link>
             </div>
           </div>

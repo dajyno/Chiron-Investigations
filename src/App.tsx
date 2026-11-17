@@ -39,6 +39,9 @@ const AssessmentPage = React.lazy(() =>
 const PortalPage = React.lazy(() =>
   import('./pages/PortalPage').then((m) => ({ default: m.PortalPage }))
 );
+const AdminPage = React.lazy(() =>
+  import('./pages/AdminPage').then((m) => ({ default: m.AdminPage }))
+);
 
 const ROUTE_TITLES: Record<string, string> = {
   '/': 'Chiron Investigations | Cybercrime Forensics & Cryptocurrency Recovery',
@@ -51,6 +54,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/assessment': 'Free Case Assessment | Chiron Investigations',
   '/contact': 'Contact & Intake | Chiron Investigations',
   '/portal': 'Client Case Portal | Chiron Investigations',
+  '/admin': 'Investigator Admin Console | Chiron Investigations',
 };
 
 const ScrollAndMetaManager: React.FC = () => {
@@ -89,6 +93,7 @@ const NotFoundPage: React.FC = () => (
 const AppShell: React.FC = () => {
   const { pathname } = useLocation();
   const [cookieVisible, setCookieVisible] = useState<boolean>(false);
+  const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/');
 
   useEffect(() => {
     testConnection();
@@ -123,12 +128,14 @@ const AppShell: React.FC = () => {
               <Route path="/assessment" element={<AssessmentPage />} />
               <Route path="/contact" element={<AssessmentPage isContactRoute />} />
               <Route path="/portal" element={<PortalPage />} />
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/*" element={<AdminPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Suspense>
         </motion.div>
       </main>
-      <FaqSection />
+      {!isAdminRoute && <FaqSection />}
       <Footer onOpenCookieSettings={() => setCookieVisible(true)} />
       <WhatsAppFloatingButton />
       <CookieBanner visible={cookieVisible} onClose={() => setCookieVisible(false)} />

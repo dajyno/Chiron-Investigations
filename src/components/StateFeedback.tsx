@@ -20,34 +20,25 @@ export const CaseDossierSkeleton: React.FC<{ compact?: boolean }> = ({ compact =
         role="status"
         aria-live="polite"
         aria-label="Verifying case reference status"
-        className="mt-6 rounded-2xl border border-[#E2E8F0] bg-white/95 backdrop-blur-md p-6 space-y-4 shadow-sm"
+        className="mt-4 rounded-xl border border-[#E2E8F0] bg-white/95 p-4 sm:p-5 space-y-3.5 shadow-xs"
       >
-        <div className="flex items-start justify-between gap-4 pb-4 border-b border-[#E2E8F0]">
-          <div className="space-y-2 flex-1">
-            <SkeletonBlock className="h-3 w-32 bg-[#FCF8EA]" />
-            <SkeletonBlock className="h-5 w-56" />
-            <SkeletonBlock className="h-3 w-40" />
-          </div>
-          <div className="space-y-1.5 flex flex-col items-end">
-            <SkeletonBlock className="h-3 w-20" />
-            <SkeletonBlock className="h-4 w-24" />
-          </div>
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-[#E2E8F0]">
+          <SkeletonBlock className="h-3.5 w-48 bg-[#FCF8EA]" />
+          <SkeletonBlock className="h-3.5 w-12" />
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
           {[0, 1, 2, 3].map((idx) => (
-            <div
-              key={idx}
-              className="p-3 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] space-y-2"
-            >
-              <SkeletonBlock className="h-3 w-20" />
+            <div key={idx} className="space-y-1.5">
+              <SkeletonBlock className="h-2.5 w-24" />
+              <SkeletonBlock className="h-4 w-36" />
             </div>
           ))}
         </div>
 
-        <div className="pt-2 flex items-center justify-between gap-3">
-          <SkeletonBlock className="h-3 w-48" />
-          <SkeletonBlock className="h-3 w-32" />
+        <div className="pt-3 border-t border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <SkeletonBlock className="h-3 w-40" />
+          <SkeletonBlock className="h-3 w-28" />
         </div>
       </div>
     );

@@ -390,7 +390,7 @@ export const PortalPage: React.FC = () => {
               <EmptyStateCard
                 icon={ShieldCheck}
                 title="Enter Your Case Reference ID to View Triage Status"
-                description="For strict PII confidentiality, portal lookups display only your investigation progress, assigned analyst, and evidence counts—never your personal contact information."
+                description="Enter your Case Reference ID to inspect the client record, brief case summary, live investigation stage, assigned analyst, and logged evidence counts while keeping email addresses and raw wallet/TXID lists private."
                 actionLabel="Need to Submit a New Case?"
                 actionTo="/assessment"
               />
@@ -431,6 +431,31 @@ export const PortalPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
+
+                  {/* Client & Case Summary */}
+                  <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div className="rounded-xl border border-[#E2E8F0] bg-white p-3.5">
+                      <div className="text-[#475569]">Client Name</div>
+                      <div className="font-bold text-[#0A0A0A] mt-0.5">
+                        {activeCase.clientName?.trim() || 'Not provided'}
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[#E2E8F0] bg-white p-3.5">
+                      <div className="text-[#475569]">Phone Number</div>
+                      <div className="font-mono-tabular font-bold text-[#0A0A0A] mt-0.5">
+                        {activeCase.clientPhone?.trim() || 'Not provided'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {activeCase.caseSummary && (
+                    <div className="mt-4 rounded-xl border border-[#E2E8F0] bg-[#FCF8EA]/45 p-4 space-y-1">
+                      <div className="text-xs font-bold text-[#0A0A0A]">Brief Case Summary</div>
+                      <p className="text-xs sm:text-sm text-[#334155] leading-relaxed">
+                        {activeCase.caseSummary}
+                      </p>
+                    </div>
+                  )}
 
                   {/* 4-Stage Pipeline */}
                   <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

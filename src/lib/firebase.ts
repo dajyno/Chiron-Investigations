@@ -1,5 +1,5 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getApps, initializeApp } from 'firebase/app';
+import { Auth, getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { doc, getDocFromServer, getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -7,6 +7,12 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+
+export function getStaffProvisionerAuth(): Auth {
+  const existing = getApps().find((a) => a.name === 'ChironStaffProvisioner');
+  const secondaryApp = existing ?? initializeApp(firebaseConfig, 'ChironStaffProvisioner');
+  return getAuth(secondaryApp);
+}
 
 export enum OperationType {
   CREATE = 'create',

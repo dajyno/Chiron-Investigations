@@ -25,10 +25,8 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isVerifiedUser() && (
-        request.auth.token.email == 'obulo.eric@gmail.com' ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-      );
+      return (isVerifiedUser() && request.auth.token.email == 'obulo.eric@gmail.com') ||
+        (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
     }
 
     function isValidId(id) {
@@ -81,7 +79,7 @@ service cloud.firestore {
         && isValidHexToken(data.lookupToken)
         && data.ownerUid is string && data.ownerUid.size() <= 128
         && (
-          (!isSignedIn() && data.ownerUid == '') ||
+          ((!isSignedIn() || !isVerifiedUser()) && data.ownerUid == '') ||
           (isVerifiedUser() && (data.ownerUid == '' || data.ownerUid == request.auth.uid))
         )
         && data.scamTypeSlug is string && data.scamTypeSlug.size() >= 3 && data.scamTypeSlug.size() <= 64
@@ -118,7 +116,8 @@ service cloud.firestore {
           'caseRef', 'scamTypeSlug', 'lossCategory', 'estimatedLossAmount',
           'currency', 'incidentDate', 'platformNames', 'walletCount',
           'txHashCount', 'reportedAuthorities', 'status', 'assignedAnalyst',
-          'ownerUid', 'createdAt', 'updatedAt'
+          'ownerUid', 'clientName', 'clientPhone', 'caseSummary',
+          'createdAt', 'updatedAt'
         ])
         && data.caseRef is string && data.caseRef.size() >= 12 && data.caseRef.size() <= 24
         && data.caseRef.matches('^CHR-[0-9]{4}-[A-Z0-9]{4,10}$')
@@ -136,6 +135,9 @@ service cloud.firestore {
         && isValidCaseStatus(data.status)
         && data.assignedAnalyst is string && data.assignedAnalyst.size() >= 2 && data.assignedAnalyst.size() <= 120
         && data.ownerUid is string && data.ownerUid.size() <= 128
+        && (!('clientName' in data) || (data.clientName is string && data.clientName.size() <= 120))
+        && (!('clientPhone' in data) || (data.clientPhone is string && data.clientPhone.size() <= 40))
+        && (!('caseSummary' in data) || (data.caseSummary is string && data.caseSummary.size() <= 500))
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;
     }
@@ -152,6 +154,31 @@ service cloud.firestore {
         && data.note is string && data.note.size() >= 3 && data.note.size() <= 2000
         && isValidBoundedStringList(data.newTransactionHashes, 10)
         && data.submittedByRole in ['client', 'analyst']
+        && data.createdAt is timestamp;
+    }
+
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll([
+          'username', 'displayName', 'email', 'role', 'createdByUid', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'username', 'displayName', 'email', 'role', 'createdByUid', 'createdAt'
+        ])
+        && data.username is string && data.username.size() >= 3 && data.username.size() <= 40
+        && data.username.matches('^[a-z0-9._-]+$')
+        && data.displayName is string && data.displayName.size() >= 2 && data.displayName.size() <= 80
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 160
+        && data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
+        && data.role == 'admin'
+        && data.createdByUid is string && data.createdByUid.size() >= 4 && data.createdByUid.size() <= 128
+        && data.createdAt is timestamp;
+    }
+
+    function isValidBootstrapLock(data) {
+      return data.keys().hasAll(['initializedByUid', 'createdAt'])
+        && data.keys().hasOnly(['initializedByUid', 'createdAt'])
+        && data.initializedByUid is string && data.initializedByUid.size() >= 4 && data.initializedByUid.size() <= 128
+        && data.initializedByUid == request.auth.uid
         && data.createdAt is timestamp;
     }
 
@@ -184,12 +211,17 @@ service cloud.firestore {
       allow list: if isAdmin() || (isVerifiedUser() && resource.data.ownerUid == request.auth.uid);
       allow create: if isValidHexToken(lookupToken)
         && isValidCaseLookup(incoming())
-        && incoming().status == 'intake_received'
-        && incoming().createdAt == request.time
         && incoming().updatedAt == request.time
         && (
-          (!isSignedIn() && incoming().ownerUid == '') ||
-          (isVerifiedUser() && (incoming().ownerUid == '' || incoming().ownerUid == request.auth.uid))
+          isAdmin() ||
+          (
+            incoming().status == 'intake_received'
+            && incoming().createdAt == request.time
+            && (
+              ((!isSignedIn() || !isVerifiedUser()) && incoming().ownerUid == '') ||
+              (isVerifiedUser() && (incoming().ownerUid == '' || incoming().ownerUid == request.auth.uid))
+            )
+          )
         );
       allow update: if isValidHexToken(lookupToken)
         && isValidCaseLookup(incoming())
@@ -225,11 +257,43 @@ service cloud.firestore {
       }
     }
 
-    // Administrator registry
+    // Staff administrator registry
     match /admins/{adminUid} {
-      allow get: if isValidId(adminUid) && (isAdmin() || (isVerifiedUser() && request.auth.uid == adminUid));
+      allow get: if isValidId(adminUid) && (
+        isAdmin() ||
+        (isSignedIn() && request.auth.uid == adminUid)
+      );
+      allow list: if isAdmin();
+      allow create: if isValidId(adminUid)
+        && isSignedIn()
+        && isValidAdminRecord(incoming())
+        && incoming().createdAt == request.time
+        && (
+          (isAdmin() && incoming().createdByUid == request.auth.uid) ||
+          (
+            !exists(/databases/$(database)/documents/system_meta/admin_bootstrap)
+            && existsAfter(/databases/$(database)/documents/system_meta/admin_bootstrap)
+            && adminUid == request.auth.uid
+            && incoming().createdByUid == request.auth.uid
+            && incoming().username == 'admin'
+          )
+        );
+      allow update: if false;
+      allow delete: if isValidId(adminUid) && isAdmin() && adminUid != request.auth.uid;
+    }
+
+    // One-time immutable bootstrap lock for initial staff admin creation
+    match /system_meta/{docId} {
+      allow get: if isValidId(docId) && docId == 'admin_bootstrap' && isSignedIn();
       allow list: if false;
-      allow create, update, delete: if false;
+      allow create: if isValidId(docId)
+        && docId == 'admin_bootstrap'
+        && isSignedIn()
+        && isValidBootstrapLock(incoming())
+        && incoming().createdAt == request.time
+        && !exists(/databases/$(database)/documents/system_meta/admin_bootstrap)
+        && existsAfter(/databases/$(database)/documents/admins/$(request.auth.uid));
+      allow update, delete: if false;
     }
   }
 }
