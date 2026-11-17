@@ -1,0 +1,280 @@
+{
+  "entities": {
+    "CaseIntake": {
+      "title": "CaseIntake",
+      "description": "Confidential cybercrime and cryptocurrency loss assessment intake containing client contact PII and detailed narrative.",
+      "type": "object",
+      "properties": {
+        "caseRef": {
+          "type": "string",
+          "minLength": 12,
+          "maxLength": 24,
+          "pattern": "^CHR-[0-9]{4}-[A-Z0-9]{4,10}$"
+        },
+        "lookupToken": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "scamTypeSlug": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 64,
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "lossCategory": {
+          "type": "string",
+          "enum": ["crypto", "wire", "investment", "wallet_drain", "romance", "other"]
+        },
+        "estimatedLossAmount": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["GBP", "USD", "EUR", "BTC", "ETH", "USDT", "USDC", "OTHER"]
+        },
+        "incidentDate": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 32
+        },
+        "reportedAuthorities": {
+          "type": "array"
+        },
+        "walletAddresses": {
+          "type": "array"
+        },
+        "transactionHashes": {
+          "type": "array"
+        },
+        "platformNames": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "narrativeSummary": {
+          "type": "string",
+          "minLength": 20,
+          "maxLength": 4000
+        },
+        "contactName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "contactEmail": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 160,
+          "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+        },
+        "contactPhone": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "preferredContact": {
+          "type": "string",
+          "enum": ["email", "phone", "encrypted_signal"]
+        },
+        "consentAcknowledged": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["intake_received", "initial_triage", "chain_clustering", "dossier_ready"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "caseRef",
+        "lookupToken",
+        "ownerUid",
+        "scamTypeSlug",
+        "lossCategory",
+        "estimatedLossAmount",
+        "currency",
+        "incidentDate",
+        "reportedAuthorities",
+        "walletAddresses",
+        "transactionHashes",
+        "platformNames",
+        "narrativeSummary",
+        "contactName",
+        "contactEmail",
+        "contactPhone",
+        "preferredContact",
+        "consentAcknowledged",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CaseLookup": {
+      "title": "CaseLookup",
+      "description": "PII-free forensic status and triage record keyed by a SHA-256 credential token for Client Portal lookup.",
+      "type": "object",
+      "properties": {
+        "caseRef": {
+          "type": "string",
+          "minLength": 12,
+          "maxLength": 24,
+          "pattern": "^CHR-[0-9]{4}-[A-Z0-9]{4,10}$"
+        },
+        "scamTypeSlug": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 64,
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "lossCategory": {
+          "type": "string",
+          "enum": ["crypto", "wire", "investment", "wallet_drain", "romance", "other"]
+        },
+        "estimatedLossAmount": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["GBP", "USD", "EUR", "BTC", "ETH", "USDT", "USDC", "OTHER"]
+        },
+        "incidentDate": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 32
+        },
+        "platformNames": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "walletCount": {
+          "type": "number"
+        },
+        "txHashCount": {
+          "type": "number"
+        },
+        "reportedAuthorities": {
+          "type": "array"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["intake_received", "initial_triage", "chain_clustering", "dossier_ready"]
+        },
+        "assignedAnalyst": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "caseRef",
+        "scamTypeSlug",
+        "lossCategory",
+        "estimatedLossAmount",
+        "currency",
+        "incidentDate",
+        "platformNames",
+        "walletCount",
+        "txHashCount",
+        "reportedAuthorities",
+        "status",
+        "assignedAnalyst",
+        "ownerUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CaseUpdate": {
+      "title": "CaseUpdate",
+      "description": "Supplementary transaction hashes or narrative evidence appended to a case dossier.",
+      "type": "object",
+      "properties": {
+        "caseRef": {
+          "type": "string",
+          "minLength": 12,
+          "maxLength": 24,
+          "pattern": "^CHR-[0-9]{4}-[A-Z0-9]{4,10}$"
+        },
+        "note": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 2000
+        },
+        "newTransactionHashes": {
+          "type": "array"
+        },
+        "submittedByRole": {
+          "type": "string",
+          "enum": ["client", "analyst"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "caseRef",
+        "note",
+        "newTransactionHashes",
+        "submittedByRole",
+        "createdAt"
+      ]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Authorized investigator or administrator profile.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin"]
+        }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/case_intakes/{intakeId}": {
+      "schema": { "$ref": "#/entities/CaseIntake" },
+      "description": "Stores full confidential client intake submissions including PII. Restricted from public reads."
+    },
+    "/case_lookups/{lookupToken}": {
+      "schema": { "$ref": "#/entities/CaseLookup" },
+      "description": "Stores PII-free case status keyed by a 64-char SHA-256 token derived from the Case Reference ID."
+    },
+    "/case_lookups/{lookupToken}/updates/{updateId}": {
+      "schema": { "$ref": "#/entities/CaseUpdate" },
+      "description": "Stores supplementary forensic updates and newly submitted transaction hashes attached to a case."
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Stores authorized administrator accounts."
+    }
+  }
+}

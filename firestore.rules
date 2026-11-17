@@ -1,0 +1,235 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core primitives
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'obulo.eric@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 4 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidHexToken(token) {
+      return token is string && token.size() == 64 && token.matches('^[a-f0-9]{64}$');
+    }
+
+    function isValidBoundedStringList(arr, maxLen) {
+      return arr is list
+        && arr.size() <= maxLen
+        && (arr.size() == 0 || (arr[0] is string && arr[0].size() <= 160));
+    }
+
+    function isValidCaseStatus(status) {
+      return status in ['intake_received', 'initial_triage', 'chain_clustering', 'dossier_ready'];
+    }
+
+    function isValidLossCategory(category) {
+      return category in ['crypto', 'wire', 'investment', 'wallet_drain', 'romance', 'other'];
+    }
+
+    function isValidCurrency(currency) {
+      return currency in ['GBP', 'USD', 'EUR', 'BTC', 'ETH', 'USDT', 'USDC', 'OTHER'];
+    }
+
+    function isValidPreferredContact(method) {
+      return method in ['email', 'phone', 'encrypted_signal'];
+    }
+
+    function isValidCaseIntake(data) {
+      return data.keys().hasAll([
+          'caseRef', 'lookupToken', 'ownerUid', 'scamTypeSlug', 'lossCategory',
+          'estimatedLossAmount', 'currency', 'incidentDate', 'reportedAuthorities',
+          'walletAddresses', 'transactionHashes', 'platformNames', 'narrativeSummary',
+          'contactName', 'contactEmail', 'contactPhone', 'preferredContact',
+          'consentAcknowledged', 'status', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'caseRef', 'lookupToken', 'ownerUid', 'scamTypeSlug', 'lossCategory',
+          'estimatedLossAmount', 'currency', 'incidentDate', 'reportedAuthorities',
+          'walletAddresses', 'transactionHashes', 'platformNames', 'narrativeSummary',
+          'contactName', 'contactEmail', 'contactPhone', 'preferredContact',
+          'consentAcknowledged', 'status', 'createdAt', 'updatedAt'
+        ])
+        && data.caseRef is string && data.caseRef.size() >= 12 && data.caseRef.size() <= 24
+        && data.caseRef.matches('^CHR-[0-9]{4}-[A-Z0-9]{4,10}$')
+        && isValidHexToken(data.lookupToken)
+        && data.ownerUid is string && data.ownerUid.size() <= 128
+        && (
+          (!isSignedIn() && data.ownerUid == '') ||
+          (isVerifiedUser() && (data.ownerUid == '' || data.ownerUid == request.auth.uid))
+        )
+        && data.scamTypeSlug is string && data.scamTypeSlug.size() >= 3 && data.scamTypeSlug.size() <= 64
+        && data.scamTypeSlug.matches('^[a-z0-9-]+$')
+        && isValidLossCategory(data.lossCategory)
+        && (data.estimatedLossAmount is int || data.estimatedLossAmount is float)
+        && data.estimatedLossAmount >= 0 && data.estimatedLossAmount <= 1000000000
+        && isValidCurrency(data.currency)
+        && data.incidentDate is string && data.incidentDate.size() >= 4 && data.incidentDate.size() <= 32
+        && isValidBoundedStringList(data.reportedAuthorities, 8)
+        && isValidBoundedStringList(data.walletAddresses, 15)
+        && isValidBoundedStringList(data.transactionHashes, 15)
+        && data.platformNames is string && data.platformNames.size() <= 300
+        && data.narrativeSummary is string && data.narrativeSummary.size() >= 20 && data.narrativeSummary.size() <= 4000
+        && data.contactName is string && data.contactName.size() >= 2 && data.contactName.size() <= 120
+        && data.contactEmail is string && data.contactEmail.size() >= 5 && data.contactEmail.size() <= 160
+        && data.contactEmail.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
+        && data.contactPhone is string && data.contactPhone.size() <= 40
+        && isValidPreferredContact(data.preferredContact)
+        && data.consentAcknowledged is bool && data.consentAcknowledged == true
+        && isValidCaseStatus(data.status)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCaseLookup(data) {
+      return data.keys().hasAll([
+          'caseRef', 'scamTypeSlug', 'lossCategory', 'estimatedLossAmount',
+          'currency', 'incidentDate', 'platformNames', 'walletCount',
+          'txHashCount', 'reportedAuthorities', 'status', 'assignedAnalyst',
+          'ownerUid', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'caseRef', 'scamTypeSlug', 'lossCategory', 'estimatedLossAmount',
+          'currency', 'incidentDate', 'platformNames', 'walletCount',
+          'txHashCount', 'reportedAuthorities', 'status', 'assignedAnalyst',
+          'ownerUid', 'createdAt', 'updatedAt'
+        ])
+        && data.caseRef is string && data.caseRef.size() >= 12 && data.caseRef.size() <= 24
+        && data.caseRef.matches('^CHR-[0-9]{4}-[A-Z0-9]{4,10}$')
+        && data.scamTypeSlug is string && data.scamTypeSlug.size() >= 3 && data.scamTypeSlug.size() <= 64
+        && data.scamTypeSlug.matches('^[a-z0-9-]+$')
+        && isValidLossCategory(data.lossCategory)
+        && (data.estimatedLossAmount is int || data.estimatedLossAmount is float)
+        && data.estimatedLossAmount >= 0 && data.estimatedLossAmount <= 1000000000
+        && isValidCurrency(data.currency)
+        && data.incidentDate is string && data.incidentDate.size() >= 4 && data.incidentDate.size() <= 32
+        && data.platformNames is string && data.platformNames.size() <= 300
+        && data.walletCount is int && data.walletCount >= 0 && data.walletCount <= 50
+        && data.txHashCount is int && data.txHashCount >= 0 && data.txHashCount <= 50
+        && isValidBoundedStringList(data.reportedAuthorities, 8)
+        && isValidCaseStatus(data.status)
+        && data.assignedAnalyst is string && data.assignedAnalyst.size() >= 2 && data.assignedAnalyst.size() <= 120
+        && data.ownerUid is string && data.ownerUid.size() <= 128
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCaseUpdate(data) {
+      return data.keys().hasAll([
+          'caseRef', 'note', 'newTransactionHashes', 'submittedByRole', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'caseRef', 'note', 'newTransactionHashes', 'submittedByRole', 'createdAt'
+        ])
+        && data.caseRef is string && data.caseRef.size() >= 12 && data.caseRef.size() <= 24
+        && data.caseRef.matches('^CHR-[0-9]{4}-[A-Z0-9]{4,10}$')
+        && data.note is string && data.note.size() >= 3 && data.note.size() <= 2000
+        && isValidBoundedStringList(data.newTransactionHashes, 10)
+        && data.submittedByRole in ['client', 'analyst']
+        && data.createdAt is timestamp;
+    }
+
+    // Confidential intake documents (strict PII isolation)
+    match /case_intakes/{intakeId} {
+      allow get: if isValidId(intakeId) && (
+        isAdmin() ||
+        (isVerifiedUser() && existing().ownerUid != '' && existing().ownerUid == request.auth.uid)
+      );
+      allow list: if isAdmin() || (isVerifiedUser() && resource.data.ownerUid == request.auth.uid);
+      allow create: if isValidId(intakeId)
+        && isValidCaseIntake(incoming())
+        && incoming().status == 'intake_received'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(intakeId)
+        && isValidCaseIntake(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().caseRef == existing().caseRef
+        && incoming().lookupToken == existing().lookupToken
+        && incoming().ownerUid == existing().ownerUid
+        && isAdmin();
+      allow delete: if isValidId(intakeId) && isAdmin();
+    }
+
+    // PII-free status lookup keyed by 64-char SHA-256 token of normalized caseRef
+    match /case_lookups/{lookupToken} {
+      allow get: if isValidHexToken(lookupToken);
+      allow list: if isAdmin() || (isVerifiedUser() && resource.data.ownerUid == request.auth.uid);
+      allow create: if isValidHexToken(lookupToken)
+        && isValidCaseLookup(incoming())
+        && incoming().status == 'intake_received'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          (!isSignedIn() && incoming().ownerUid == '') ||
+          (isVerifiedUser() && (incoming().ownerUid == '' || incoming().ownerUid == request.auth.uid))
+        );
+      allow update: if isValidHexToken(lookupToken)
+        && isValidCaseLookup(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().caseRef == existing().caseRef
+        && incoming().ownerUid == existing().ownerUid
+        && (
+          isAdmin() ||
+          (
+            existing().status != 'dossier_ready'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['txHashCount', 'updatedAt'])
+            && incoming().txHashCount >= existing().txHashCount
+            && incoming().txHashCount <= existing().txHashCount + 10
+          )
+        );
+      allow delete: if isValidHexToken(lookupToken) && isAdmin();
+
+      // Supplementary evidence updates under the token-gated parent
+      match /updates/{updateId} {
+        allow get: if isValidHexToken(lookupToken) && isValidId(updateId)
+          && exists(/databases/$(database)/documents/case_lookups/$(lookupToken));
+        allow list: if isValidHexToken(lookupToken);
+        allow create: if isValidHexToken(lookupToken)
+          && isValidId(updateId)
+          && isValidCaseUpdate(incoming())
+          && incoming().createdAt == request.time
+          && exists(/databases/$(database)/documents/case_lookups/$(lookupToken))
+          && incoming().caseRef == get(/databases/$(database)/documents/case_lookups/$(lookupToken)).data.caseRef
+          && get(/databases/$(database)/documents/case_lookups/$(lookupToken)).data.status != 'dossier_ready'
+          && (isAdmin() || incoming().submittedByRole == 'client');
+        allow update, delete: if isValidHexToken(lookupToken) && isValidId(updateId) && isAdmin();
+      }
+    }
+
+    // Administrator registry
+    match /admins/{adminUid} {
+      allow get: if isValidId(adminUid) && (isAdmin() || (isVerifiedUser() && request.auth.uid == adminUid));
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+  }
+}

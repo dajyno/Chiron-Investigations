@@ -1,0 +1,6 @@
+{
+  "name": "Chiron Investigations",
+  "description": "Independent cybercrime investigation, blockchain forensics, and cryptocurrency asset recovery advisory.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
