@@ -1,19 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { User, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
+import { AnimatePresence, motion } from 'motion/react';
+import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import {
+  AlertTriangle,
   CheckCircle2,
   Clock,
+  Eye,
+  EyeOff,
   FilePlus2,
   FileSearch,
   FileText,
   FolderOpen,
   KeyRound,
   Loader2,
+  Lock,
   LogOut,
   Search,
   ShieldCheck,
+  X,
 } from 'lucide-react';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { HeroReveal, Reveal } from '../components/MotionPrimitives';
@@ -22,7 +27,7 @@ import {
   CaseDossierSkeleton,
   EmptyStateCard,
 } from '../components/StateFeedback';
-import { auth, googleProvider } from '../lib/firebase';
+import { auth } from '../lib/firebase';
 import {
   appendCaseEvidenceUpdate,
   BLUEPRINT_LIMITS,
@@ -30,9 +35,16 @@ import {
   CaseStatus,
   CaseUpdateRecord,
   getRecentLocalCases,
+  getStaffProfile,
+  listAllCaseLookupsForStaff,
   listAuthenticatedUserCases,
   lookupCaseByReference,
+  normalizeStaffUsername,
   RecentLocalCase,
+  signInStaffWithUsername,
+  STAFF_EMAIL_PROVIDER_DISABLED,
+  StaffAdminRecord,
+  verifyAdminAccess,
 } from '../lib/caseService';
 import { getScamTypeBySlug } from '../data/scamTypesData';
 
@@ -78,28 +90,66 @@ export const PortalPage: React.FC = () => {
   const [updateFeedback, setUpdateFeedback] = useState('');
 
   const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
+  const [isStaffUser, setIsStaffUser] = useState(false);
+  const [staffProfile, setStaffProfile] = useState<StaffAdminRecord | null>(null);
   const [userCases, setUserCases] = useState<CaseLookupRecord[]>([]);
   const [loadingUserCases, setLoadingUserCases] = useState(false);
+
+  const [showSignInModal, setShowSignInModal] = useState(false);
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
+  const [signInError, setSignInError] = useState('');
 
   useEffect(() => {
     setRecentCases(getRecentLocalCases());
   }, []);
 
   useEffect(() => {
+    if (!showSignInModal) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowSignInModal(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showSignInModal]);
+
+  useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      if (user && user.emailVerified) {
-        setLoadingUserCases(true);
-        try {
+      if (!user) {
+        setIsStaffUser(false);
+        setStaffProfile(null);
+        setUserCases([]);
+        return;
+      }
+
+      setLoadingUserCases(true);
+      try {
+        const staffAccess = await verifyAdminAccess(user).catch(() => false);
+        setIsStaffUser(staffAccess);
+        if (staffAccess) {
+          const [profile, rows] = await Promise.all([
+            getStaffProfile(user.uid).catch(() => null),
+            listAllCaseLookupsForStaff(),
+          ]);
+          setStaffProfile(profile);
+          setUserCases(rows);
+        } else if (user.emailVerified) {
+          setStaffProfile(null);
           const rows = await listAuthenticatedUserCases(user.uid);
           setUserCases(rows);
-        } catch {
+        } else {
+          setStaffProfile(null);
           setUserCases([]);
-        } finally {
-          setLoadingUserCases(false);
         }
-      } else {
+      } catch {
         setUserCases([]);
+      } finally {
+        setLoadingUserCases(false);
       }
     });
     return () => unsub();
@@ -183,11 +233,36 @@ export const PortalPage: React.FC = () => {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const openSignInOverlay = () => {
+    setSignInError('');
+    setShowSignInModal(true);
+  };
+
+  const closeSignInOverlay = () => {
+    setShowSignInModal(false);
+    setSignInError('');
+    setLoginPassword('');
+  };
+
+  const handleUsernameSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignInError('');
+    setSigningIn(true);
     try {
-      await signInWithPopup(auth, googleProvider);
-    } catch {
-      setLookupError('Google sign-in was cancelled or blocked by your browser.');
+      await signInStaffWithUsername(loginUsername, loginPassword);
+      setLoginPassword('');
+      setShowSignInModal(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unable to sign in.';
+      if (message === STAFF_EMAIL_PROVIDER_DISABLED) {
+        setSignInError(
+          'Email/Password sign-in must be enabled once in your Firebase Console Authentication settings.'
+        );
+      } else {
+        setSignInError(message);
+      }
+    } finally {
+      setSigningIn(false);
     }
   };
 
@@ -195,6 +270,10 @@ export const PortalPage: React.FC = () => {
   const activeStageIndex = activeCase
     ? STAGES.findIndex((s) => s.key === activeCase.status)
     : -1;
+  const signedInLabel = currentUser
+    ? staffProfile?.username ||
+      (currentUser.email ? normalizeStaffUsername(currentUser.email) : 'Staff Session')
+    : '';
 
   return (
     <div className="bg-white text-[#0A0A0A]">
@@ -216,10 +295,18 @@ export const PortalPage: React.FC = () => {
             </p>
           </HeroReveal>
 
-          <HeroReveal delay={0.08} className="flex items-center gap-3 shrink-0">
+          <HeroReveal delay={0.08} className="flex flex-wrap items-center gap-3 shrink-0">
             {currentUser ? (
-              <div className="flex items-center gap-3 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-2 text-xs shadow-xs">
-                <span className="font-medium text-[#0A0A0A]">{currentUser.email}</span>
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-2 text-xs shadow-xs">
+                <span className="font-semibold text-[#0A0A0A]">{signedInLabel}</span>
+                {isStaffUser && (
+                  <Link
+                    to="/admin"
+                    className="font-semibold text-[#946E00] hover:underline"
+                  >
+                    Admin Console
+                  </Link>
+                )}
                 <button
                   type="button"
                   onClick={() => signOut(auth)}
@@ -232,10 +319,10 @@ export const PortalPage: React.FC = () => {
             ) : (
               <button
                 type="button"
-                onClick={handleGoogleSignIn}
-                className="px-4 py-2.5 luxury-btn-secondary text-xs font-semibold cursor-pointer"
+                onClick={openSignInOverlay}
+                className="min-h-[42px] px-4 py-2.5 luxury-btn-secondary text-xs font-semibold cursor-pointer"
               >
-                Sign In With Google
+                Sign In
               </button>
             )}
           </HeroReveal>
@@ -329,10 +416,12 @@ export const PortalPage: React.FC = () => {
               )}
             </div>
 
-            {/* Authenticated Google Account Cases (with Skeleton Loading & Empty State) */}
+            {/* Authenticated Account Cases (with Skeleton Loading & Empty State) */}
             {currentUser && (
               <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6 space-y-3 shadow-[0_6px_22px_-10px_rgba(10,10,10,0.06)]">
-                <h3 className="text-xs font-bold text-[#0A0A0A]">Cases Linked to Your Account</h3>
+                <h3 className="text-xs font-bold text-[#0A0A0A]">
+                  {isStaffUser ? 'Active Case Dossiers' : 'Cases Linked to Your Account'}
+                </h3>
                 {loadingUserCases ? (
                   <AccountCasesSkeleton count={2} />
                 ) : userCases.length === 0 ? (
@@ -638,6 +727,148 @@ export const PortalPage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Username & Password Sign-In Overlay */}
+      <AnimatePresence>
+        {showSignInModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                closeSignInOverlay();
+              }
+            }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="portal-signin-heading"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A0A0A]/55 backdrop-blur-xs overflow-y-auto"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full max-w-md rounded-2xl border border-[#E2E8F0] bg-white p-6 sm:p-8 shadow-2xl relative my-auto"
+            >
+              <button
+                type="button"
+                onClick={closeSignInOverlay}
+                aria-label="Close sign in overlay"
+                className="absolute right-4 top-4 inline-flex items-center justify-center w-9 h-9 rounded-lg text-[#64748B] hover:text-[#0A0A0A] hover:bg-[#F8FAFC] transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" aria-hidden="true" />
+              </button>
+
+              <form onSubmit={handleUsernameSignIn} className="space-y-5">
+                <div className="space-y-2 pr-8">
+                  <div className="w-10 h-10 rounded-xl border border-[#D4AF37]/40 bg-[#FCF8EA] flex items-center justify-center">
+                    <Lock className="w-4 h-4 text-[#946E00]" aria-hidden="true" />
+                  </div>
+                  <h2 id="portal-signin-heading" className="text-lg font-bold text-[#0A0A0A]">
+                    Sign In
+                  </h2>
+                  <p className="text-xs text-[#475569] leading-relaxed">
+                    Enter your username and password to access your account dossiers.
+                  </p>
+                </div>
+
+                {signInError && (
+                  <div
+                    role="alert"
+                    className="p-3.5 rounded-xl border border-[#D4AF37] bg-[#FCF8EA] text-xs text-[#0A0A0A] flex items-start gap-2"
+                  >
+                    <AlertTriangle
+                      className="w-4 h-4 text-[#946E00] shrink-0 mt-0.5"
+                      aria-hidden="true"
+                    />
+                    <span className="leading-relaxed">{signInError}</span>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div>
+                    <label
+                      htmlFor="portal-signin-username"
+                      className="block text-xs font-semibold text-[#0A0A0A] mb-1.5"
+                    >
+                      Username
+                    </label>
+                    <input
+                      id="portal-signin-username"
+                      type="text"
+                      required
+                      autoFocus
+                      autoComplete="username"
+                      placeholder="Enter username"
+                      value={loginUsername}
+                      onChange={(e) => setLoginUsername(e.target.value)}
+                      className="w-full min-h-[44px] rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-base sm:text-sm text-[#0A0A0A] focus:outline-none focus:border-[#D4AF37]"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="portal-signin-password"
+                      className="block text-xs font-semibold text-[#0A0A0A] mb-1.5"
+                    >
+                      Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="portal-signin-password"
+                        type={showLoginPassword ? 'text' : 'password'}
+                        required
+                        autoComplete="current-password"
+                        placeholder="Enter password"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        className="w-full min-h-[44px] rounded-xl border border-[#CBD5E1] bg-white pl-4 pr-11 py-2.5 text-base sm:text-sm text-[#0A0A0A] focus:outline-none focus:border-[#D4AF37]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowLoginPassword((prev) => !prev)}
+                        aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-[#64748B] hover:text-[#0A0A0A] cursor-pointer"
+                      >
+                        {showLoginPassword ? (
+                          <EyeOff className="w-4 h-4" aria-hidden="true" />
+                        ) : (
+                          <Eye className="w-4 h-4" aria-hidden="true" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-end gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={closeSignInOverlay}
+                    className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 luxury-btn-secondary text-xs font-semibold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={signingIn}
+                    className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-2.5 luxury-btn-primary text-xs font-semibold disabled:opacity-70 cursor-pointer"
+                  >
+                    {signingIn ? (
+                      <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <ShieldCheck className="w-4 h-4" aria-hidden="true" />
+                    )}
+                    <span>{signingIn ? 'Signing In...' : 'Sign In'}</span>
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

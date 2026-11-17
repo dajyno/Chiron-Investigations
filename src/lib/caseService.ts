@@ -538,6 +538,26 @@ export async function listAuthenticatedUserCases(uid: string): Promise<CaseLooku
   }
 }
 
+export async function listAllCaseLookupsForStaff(): Promise<CaseLookupRecord[]> {
+  const path = 'case_lookups';
+  try {
+    const snap = await getDocs(
+      query(collection(db, path), orderBy('createdAt', 'desc'))
+    );
+    const deduped = new Map<string, CaseLookupRecord>();
+    snap.docs.forEach((d) => {
+      const data = d.data() as CaseLookupRecord;
+      const normRef = normalizeCaseRef(data.caseRef || '');
+      if (normRef && !deduped.has(normRef)) {
+        deduped.set(normRef, { ...data, caseRef: normRef });
+      }
+    });
+    return Array.from(deduped.values());
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+  }
+}
+
 export async function appendCaseEvidenceUpdate(
   lookupToken: string,
   caseRef: string,
