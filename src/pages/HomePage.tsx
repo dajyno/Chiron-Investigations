@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   ArrowRight,
   ChevronLeft,
@@ -13,13 +13,13 @@ import {
   Play,
   Scale,
   Search,
-  ShieldCheck,
   X,
 } from 'lucide-react';
 import { HeroReveal, Reveal, RevealItem, RevealStagger } from '../components/MotionPrimitives';
 import { ResilientImage } from '../components/ResilientImage';
 import { VerifyCaseWidget } from '../components/VerifyCaseWidget';
 import { SCAM_TYPES_DATA } from '../data/scamTypesData';
+import chironVideo from '../assets/chiron-video.mp4';
 import {
   FEATURED_IN_OUTLETS,
   GLOBAL_JURISDICTIONS,
@@ -48,6 +48,17 @@ export const HomePage: React.FC = () => {
     }, 7000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!briefingOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setBriefingOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [briefingOpen]);
 
   const activeTestimonial = TESTIMONIALS[testimonialIndex];
 
@@ -100,33 +111,26 @@ export const HomePage: React.FC = () => {
               </div>
             </HeroReveal>
 
-            {/* Video Briefing Embed Card with Frosted Glass Controls */}
+            {/* Video Player Preview Card */}
             <HeroReveal delay={0.1} className="lg:col-span-5 flex flex-col">
-              <div className="relative flex-1 min-h-[280px] rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] overflow-hidden flex flex-col shadow-[0_14px_38px_-12px_rgba(10,10,10,0.12)] hover:shadow-[0_20px_48px_-12px_rgba(10,10,10,0.16)] transition-shadow duration-300 group">
-                <div className="relative flex-1 min-h-[220px] overflow-hidden">
-                  <ResilientImage
-                    src="/src/assets/images/hero_forensic_briefing_1794892806078.jpg"
-                    alt="Chiron Investigations briefing room"
-                    className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
-                    fallbackTitle="Forensic Briefing Room"
-                  />
-                  <div className="absolute inset-0 bg-black/28 flex items-center justify-center">
-                    <button
-                      type="button"
-                      onClick={() => setBriefingOpen(true)}
-                      aria-label="Play investigator briefing overview"
-                      className="inline-flex items-center gap-2.5 px-5 py-3 rounded-xl bg-white/85 backdrop-blur-md text-[#0A0A0A] border border-white/80 text-xs font-semibold shadow-[0_10px_28px_rgba(10,10,10,0.22)] hover:bg-white hover:scale-[1.03] transition-all duration-200 cursor-pointer"
-                    >
-                      <Play className="w-4 h-4 text-[#C59B27]" aria-hidden="true" />
-                      <span>Watch 2-Min Intake Briefing</span>
-                    </button>
-                  </div>
-                </div>
-                <div className="px-5 py-3.5 bg-white/90 backdrop-blur-md border-t border-[#E2E8F0] flex items-center justify-between text-xs text-[#475569]">
-                  <span className="font-semibold text-[#0A0A0A]">
-                    What Realistic Recovery Looks Like
-                  </span>
-                  <span className="font-mono-tabular">02:18 · Transcript Available</span>
+              <div className="relative flex-1 min-h-[260px] sm:min-h-[300px] rounded-2xl border border-[#E2E8F0] bg-[#0A0A0A] overflow-hidden shadow-[0_14px_38px_-12px_rgba(10,10,10,0.12)] hover:shadow-[0_20px_48px_-12px_rgba(10,10,10,0.16)] transition-shadow duration-300 group">
+                <video
+                  src={chironVideo}
+                  muted
+                  playsInline
+                  preload="metadata"
+                  poster="/src/assets/images/hero_forensic_briefing_1794892806078.jpg"
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-black/25 flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setBriefingOpen(true)}
+                    aria-label="Play video"
+                    className="w-16 h-16 rounded-full bg-white/90 backdrop-blur-md text-[#0A0A0A] border border-white shadow-[0_12px_32px_rgba(10,10,10,0.28)] flex items-center justify-center hover:bg-white hover:scale-105 transition-all duration-200 cursor-pointer"
+                  >
+                    <Play className="w-6 h-6 text-[#C59B27] fill-[#C59B27] ml-0.5" aria-hidden="true" />
+                  </button>
                 </div>
               </div>
             </HeroReveal>
@@ -172,80 +176,47 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Briefing Video Modal */}
-      {briefingOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="briefing-modal-title"
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
-        >
-          <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-[#E2E8F0] shadow-[0_28px_70px_-15px_rgba(10,10,10,0.28)] max-w-2xl w-full p-6 sm:p-8">
-            <div className="flex items-start justify-between gap-4 pb-4 border-b border-[#E2E8F0]">
-              <div>
-                <p className="text-xs font-semibold text-[#946E00]">Executive Intake Briefing</p>
-                <h2 id="briefing-modal-title" className="text-xl font-bold text-[#0A0A0A] mt-1">
-                  How Chiron Evaluates Cryptocurrency &amp; Wire Fraud Cases
-                </h2>
-              </div>
+      {/* Video Player Overlay */}
+      <AnimatePresence>
+        {briefingOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Video player"
+            onClick={() => setBriefingOpen(false)}
+            className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-4xl"
+            >
               <button
                 type="button"
-                aria-label="Close briefing dialog"
+                aria-label="Close video"
                 onClick={() => setBriefingOpen(false)}
-                className="p-2 rounded-xl border border-[#E2E8F0] hover:bg-[#F8FAFC] hover:border-[#0A0A0A] transition-colors cursor-pointer"
+                className="absolute -top-12 right-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/15 text-white hover:bg-white/25 transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" aria-hidden="true" />
               </button>
-            </div>
-            <div className="mt-5 space-y-4 text-sm text-[#334155] leading-relaxed">
-              <div className="aspect-video rounded-xl bg-[#0A0A0A] text-white flex flex-col items-center justify-center p-6 text-center border border-[#E2E8F0]">
-                <ShieldCheck className="w-8 h-8 text-[#D4AF37] mb-3" aria-hidden="true" />
-                <p className="text-sm font-medium max-w-md">
-                  Principal Investigator Edward Camillieri explains our two-path triage framework:
-                  verifying VASP exit routes before recommending tracing, or issuing tax-loss
-                  documentation when recovery is unviable.
-                </p>
-                <p className="text-xs text-[#94A3B8] mt-3 font-mono-tabular">
-                  CHIRON BRIEFING · UK HEADQUARTERS · SECURE TRANSCRIPT BELOW
-                </p>
-              </div>
-              <div className="rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] p-4 text-xs text-[#475569] space-y-2">
-                <p>
-                  <strong className="text-[#0A0A0A]">00:00 – 00:45:</strong> Why immediate evidence
-                  preservation (TXIDs, wallet strings, domain screenshots, bank MT103 slips) matters
-                  more than confronting perpetrators.
-                </p>
-                <p>
-                  <strong className="text-[#0A0A0A]">00:45 – 01:35:</strong> Separating viable
-                  exchange-attributed cases from mixed or unrecoverable transfers—so you never pay
-                  for speculative tracing.
-                </p>
-                <p>
-                  <strong className="text-[#0A0A0A]">01:35 – 02:18:</strong> Submitting structured
-                  dossiers to Action Fraud, FBI IC3, Financial Ombudsman adjudicators, or your tax
-                  adviser.
-                </p>
-              </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setBriefingOpen(false)}
-                  className="px-4 py-2 text-xs font-medium luxury-btn-secondary cursor-pointer"
-                >
-                  Close Briefing
-                </button>
-                <Link
-                  to="/assessment"
-                  onClick={() => setBriefingOpen(false)}
-                  className="px-5 py-2 text-xs font-semibold luxury-btn-primary"
-                >
-                  Begin Free Assessment
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+              <video
+                src={chironVideo}
+                controls
+                autoPlay
+                playsInline
+                className="w-full aspect-video rounded-2xl bg-black shadow-[0_28px_70px_-15px_rgba(0,0,0,0.65)] outline-none"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 2. FEATURED IN LOGO MARQUEE */}
       <section aria-label="Featured media outlets" className="border-b border-[#E2E8F0] bg-[#F8FAFC]">
